@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class IdentifierCheckResponse {
-    private boolean emailExists; // True if the user exists, false otherwise
+    private boolean emailExists;
     private boolean userNameExists;
-    private String identifier;  // Echo back the identifier checked
+    private String identifier;
     private String username;
 }

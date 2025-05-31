@@ -15,24 +15,23 @@ import java.util.List;
 @AllArgsConstructor
 public class CookProfileDTO {
 
+    private Long id;
     @NotBlank(message = "Name cannot be blank")
     @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String cookname;
 
-    // Add validation as needed (e.g., @Pattern for phone)
     private String phone;
 
-    private List<String> expertise; // List of expertise strings
+    private List<String> expertise;
 
     @NotBlank(message = "Availability status cannot be blank")
     private String availabilityStatus;
-
-    // Location info - assuming frontend sends lat/lon directly for now
-    // Alternatively, receive address fields and geocode in the backend
+    private String profilePicture;
     private Double latitude;
     private Double longitude;
+    private Double chargesPerMeal;
+    private Double averageRating;
+    private Integer numberOfRatings;
+    private String placeName;
 
-    // profileImageUrl will be handled separately if file upload is implemented,
-    // or could be a URL provided by the client if they upload elsewhere.
-    // For now, we might update it in the service if file upload is handled.
 }

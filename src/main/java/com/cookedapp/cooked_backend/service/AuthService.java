@@ -48,44 +48,44 @@ public  boolean checkUsernameExists(String username){
 
     @Transactional
     public AuthResponse registerStandardUser(RegisterRequest registerRequest) {
-        validateRegistration(registerRequest); // Reuse validation
+        validateRegistration(registerRequest);
 
         User user = User.builder()
                 .username(registerRequest.getUsername())
                 .email(registerRequest.getIdentifier())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
-                .roles("ROLE_USER") // Assign standard user role
-                .status("ACTIVE")   // Standard users are active immediately
+                .roles("ROLE_USER")
+                .status("ACTIVE")
+                .averageRating(0.0)
+                .numberOfRatings(0)
                 .build();
         User savedUser = userRepository.save(user);
 
-        // Log them in immediately
+
         String token = jwtService.generateToken(savedUser);
         List<String> rolesList = getRolesAsList(savedUser);
-        return new AuthResponse("User registered successfully!", savedUser.getUsername(), token, rolesList);
+        return new AuthResponse(savedUser.getId(),"User registered successfully!", savedUser.getUsername(), token, rolesList,savedUser.getStatus(),savedUser.getAverageRating(),savedUser.getNumberOfRatings());
     }
     @Transactional
     public AuthResponse registerCookInitiate(RegisterRequest registerRequest) {
-        validateRegistration(registerRequest); // Reuse validation
+        validateRegistration(registerRequest);
 
         User user = User.builder()
                 .username(registerRequest.getUsername())
                 .email(registerRequest.getIdentifier())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
-                .roles("ROLE_USER") // Assign base role initially
-                .status("PENDING_COOK_PROFILE") // Mark as needing profile completion
+                .roles("ROLE_USER")
+                .status("PENDING_COOK_PROFILE")
                 .build();
-        // Cook specific fields (cookname, phone etc) are NULL here
-        User savedUser = userRepository.save(user);
 
-        // Log them in immediately so they can complete the profile
+        User savedUser = userRepository.save(user);
+        System.out.println("AuthService.registerCookInitiate - User being passed to generateToken: " + savedUser);
         String token = jwtService.generateToken(savedUser);
         List<String> rolesList = getRolesAsList(savedUser);
-        // Send back token so frontend can proceed to profile setup while authenticated
-        return new AuthResponse("Cook registration initiated. Please complete profile.", savedUser.getUsername(), token, rolesList);
+        return new AuthResponse(savedUser.getId(),"Cook registration initiated. Please complete profile.", savedUser.getUsername(), token, rolesList,savedUser.getStatus(),savedUser.getAverageRating(),savedUser.getNumberOfRatings());
     }
 
-    // --- Shared Validation Logic ---
+
     private void validateRegistration(RegisterRequest registerRequest) {
         if (userRepository.existsByUsername(registerRequest.getUsername())) {
             throw new IllegalArgumentException("Error: Username is already taken!");
@@ -109,11 +109,14 @@ public  boolean checkUsernameExists(String username){
 
         String token = jwtService.generateToken(user);
         List<String> rolesList = getRolesAsList(user);
-        return new AuthResponse(
+        return new AuthResponse(user.getId(),
                 "Login successful!",
-                user.getUsername(), // Include username in the response
+                user.getUsername(),
                 token,
-                rolesList
+                rolesList,
+                user.getStatus(),
+                user.getAverageRating(),
+                user.getNumberOfRatings()
         );
 
     }
@@ -124,13 +127,11 @@ public  boolean checkUsernameExists(String username){
     }
     @Transactional
     public User completeCookProfile(String setupToken, CookProfileDTO profileDto) {
-        // Find user by the setup token and check expiry
-        User user = userRepository.findBySetupToken(setupToken) // ** Need to add findBySetupToken to UserRepository **
+        User user = userRepository.findBySetupToken(setupToken)
                 .filter(u -> u.getSetupTokenExpiry() != null && u.getSetupTokenExpiry().isAfter(LocalDateTime.now()))
                 .orElseThrow(() -> new IllegalArgumentException("Invalid or expired setup token."));
 
-        // Update profile fields
-        user.setCookname(profileDto.getCookname()); // Use getCookname() if field is cookname
+        user.setCookname(profileDto.getCookname());
         user.setPhone(profileDto.getPhone());
         user.setAvailabilityStatus(profileDto.getAvailabilityStatus());
         user.setLatitude(profileDto.getLatitude());
@@ -139,9 +140,8 @@ public  boolean checkUsernameExists(String username){
             user.setExpertise(profileDto.getExpertise());
         }
 
-        // Activate user, assign cook role, clear token
+
         user.setStatus("ACTIVE");
-        // Add ROLE_COOK, ensuring not to duplicate if somehow already present
         if (!user.getRoles().contains("ROLE_COOK")) {
             user.setRoles(user.getRoles() + ",ROLE_COOK");
         }

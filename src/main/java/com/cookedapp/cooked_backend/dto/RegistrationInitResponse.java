@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RegistrationInitResponse {
     private String message;
-    private String setupToken; // The temporary token for profile setup
+    private String setupToken;
 }

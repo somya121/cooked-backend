@@ -9,8 +9,13 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AuthResponse {
+    private Long id;
     private String message;
     private String username;
     private String token;
     private List<String> roles;
+    private String status;
+    private Double averageRating;
+    private Integer numberOfRatings;
+
 }

@@ -43,17 +43,32 @@ public class User implements UserDetails {
     private String profilePicture;
     private Double latitude;
     private Double longitude;
-    @ElementCollection(fetch = FetchType.EAGER) // Fetch expertise eagerly for simplicity
+    private Double chargesPerMeal;
+    private String placeName;
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_expertise", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "expertise")
     @Builder.Default
     private List<String> expertise = new ArrayList<>();
+
+    @Builder.Default
     private String roles = "ROLE_USER";
     @Builder.Default
     private String status = "PENDING_COOK_PROFILE";
     @Column(unique = true, nullable = true)
     private String setupToken;
     private LocalDateTime setupTokenExpiry;
+    @Column(columnDefinition = "DOUBLE PRECISION DEFAULT 0.0")
+    private Double averageRating = 0.0;
+
+    @Column(columnDefinition = "INTEGER DEFAULT 0")
+    private Integer numberOfRatings = 0;
+
+    @OneToMany(mappedBy = "ratedCook", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Rating> ratingsReceived;
+
+    @OneToMany(mappedBy = "ratedByUser", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Rating> ratingsGiven;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -83,6 +98,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return "ACTIVE".equals(this.status); }
+        return "ACTIVE".equals(this.status) || "PENDING_COOK_PROFILE".equals(this.status); }
 
 }

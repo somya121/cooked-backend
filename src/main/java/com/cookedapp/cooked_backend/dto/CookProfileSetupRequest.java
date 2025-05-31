@@ -14,6 +14,6 @@ public class CookProfileSetupRequest {
     @NotBlank(message = "Setup token cannot be blank")
     private String setupToken;
 
-    @Valid // Validate the nested DTO
+    @Valid
     private CookProfileDTO profileData;
 }

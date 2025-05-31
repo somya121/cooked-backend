@@ -1,4 +1,4 @@
-package com.cookedapp.cooked_backend.config; // Or filter package
+package com.cookedapp.cooked_backend.config;
 
 import com.cookedapp.cooked_backend.service.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -20,12 +20,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component // Make it a Spring bean
-@RequiredArgsConstructor // Lombok for constructor injection
-public class JwtAuthenticationFilter extends OncePerRequestFilter { // Ensures filter runs only once per request
+@Component
+@RequiredArgsConstructor
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserDetailsService userDetailsService; // Spring Security interface to load user data
+    private final UserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(
@@ -34,53 +34,75 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter { // Ensures f
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // 1. Extract Authorization Header
+
         final String authHeader = request.getHeader("Authorization");
+        logger.info("JWT Filter: Received Authorization Header: {}"+authHeader);
         final String jwt;
         final String username;
+        final String identifierFromToken;
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response); // If no token, pass to next filter
+            filterChain.doFilter(request, response);
             return;
         }
 
-        // 3. Extract JWT token (remove "Bearer ")
+
         jwt = authHeader.substring(7);
-
+        logger.info("JWT Filter: Extracted JWT string (first 30 chars): {}");
         try {
-            // 4. Extract username from token using JwtService
-            username = jwtService.extractUsername(jwt);
+            identifierFromToken = jwtService.extractEmailFromToken(jwt);
+            logger.info("JWT Filter: Extracted identifier (email) from token: [{}]"+identifierFromToken);
+            if (identifierFromToken != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(identifierFromToken);
+            }
 
-            // 5. Check if username exists and user is not already authenticated
+            username = jwtService.extractEmailFromToken(jwt);
+
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // Load UserDetails from database (via UserDetailsService)
+
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-                // 6. Validate token against UserDetails
+
                 if (jwtService.isTokenValid(jwt, userDetails)) {
-                    // 7. Create Authentication token (trusted)
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, // Principal
-                            null, // Credentials (not needed for JWT)
-                            userDetails.getAuthorities() // Authorities/Roles
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
                     );
-                    // Set details from the request (e.g., IP address, session ID)
+
                     authToken.setDetails(
                             new WebAuthenticationDetailsSource().buildDetails(request)
                     );
-                    // 8. Update SecurityContextHolder - THIS IS HOW SPRING KNOWS THE USER IS AUTHENTICATED
+
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-            filterChain.doFilter(request, response); // Proceed to next filter
-
-        } catch (ExpiredJwtException | SignatureException | MalformedJwtException e) {
-            logger.warn("JWT processing error: {}" + e.getMessage());
-
             filterChain.doFilter(request, response);
+
+        } catch (ExpiredJwtException e) {
+            logger.warn("JWT Filter: Token expired: {}"+ e.getMessage(),e);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"message\": \"Token expired\"}");
+            response.setContentType("application/json");
+            return;
+        } catch (SignatureException e) {
+            logger.warn("JWT Filter: Invalid JWT signature: {}"+ e.getMessage(),e);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"message\": \"Invalid JWT signature\"}");
+            response.setContentType("application/json");
+            return;
+        } catch (MalformedJwtException e) {
+            logger.warn("JWT Filter: Malformed JWT: {}",e);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"message\": \"Malformed JWT\"}");
+            response.setContentType("application/json");
+            return;
         } catch (Exception e) {
-            // Catch other potential errors during user loading or validation
-            logger.error("Could not set user authentication in security context", e);
-            filterChain.doFilter(request, response);
+            logger.error("JWT Filter: Could not set user authentication in security context", e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"message\": \"Authentication processing error\"}");
+            response.setContentType("application/json");
+            return;
         }
     }
 }

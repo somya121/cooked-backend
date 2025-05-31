@@ -63,14 +63,14 @@ public class AuthController {
         }
     }
 
-    // POST /api/auth/register/cook
+
     @PostMapping("/register/cook")
     public ResponseEntity<?> registerCookInitiate(@Valid @RequestBody RegisterRequest registerRequest) {
         logger.info("Attempting cook registration initiation for username: {}", registerRequest.getUsername());
         try {
-            AuthResponse response = authService.registerCookInitiate(registerRequest); // Service returns AuthResponse now
+            AuthResponse response = authService.registerCookInitiate(registerRequest);
             logger.info("Cook registration initiation successful for username: {}", registerRequest.getUsername());
-            // Return AuthResponse containing token needed for profile setup
+
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
             logger.warn("Cook registration initiation failed: {}", e.getMessage());
@@ -92,7 +92,7 @@ public class AuthController {
         }
         catch (AuthenticationException e){
             logger.warn("Login failed for email {}: {}", loginRequest.getIdentifier(), e.getMessage());
-            // Return standard unauthorized response
+
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(new MessageResponse("Login failed: Invalid email or password."));
@@ -101,7 +101,7 @@ public class AuthController {
             logger.warn("Login failed for email {}: {}", loginRequest.getIdentifier(), e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new MessageResponse(e.getMessage()));
         }
-        catch (Exception e) { // Catch any other unexpected server errors
+        catch (Exception e) {
             logger.error("An unexpected error occurred during login for email {}: ", loginRequest.getIdentifier(), e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
