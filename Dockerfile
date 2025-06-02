@@ -29,7 +29,7 @@ WORKDIR /app
 
 
 
-ARG JAR_FILE=build/libs/cooked_backend-0.0.1-SNAPSHOT-plain.jar
+ARG JAR_FILE=build/libs/cooked_backend-0.0.1-SNAPSHOT.jar
 COPY --from=builder /app/${JAR_FILE} app.jar
 
 EXPOSE 8080
